@@ -1,0 +1,62 @@
+#! /usr/bin/python
+from TOSSIM import *
+import sys
+import random
+t = Tossim([])
+r = t.radio()
+
+#f = open("topology81.txt", "r")
+#nofnodes = 81;
+
+f = open("topologyMixed.txt", "r")
+nofnodes = 100;
+#f = open("topo.txt", "r")
+#nofnodes = 4;
+#f = open("topotest10.txt", "r")
+#nofnodes = 10;
+#f = open("topotest50.txt", "r")
+#nofnodes = 50;
+#f = open("topotest200.txt", "r")
+#nofnodes = 200;
+#f = open("100_3_8.txt", "r")
+#nofnodes = 100;
+
+#f = open("topotest80.txt", "r")
+#nofnodes = 80;
+#f = open("topotest95.txt", "r")
+#nofnodes = 95;
+
+for line in f:
+  s = line.split()
+  if s:
+    #print " ", s[0], " ", s[1], " ", s[2];
+    r.add(int(s[0]), int(s[1]), float(s[2]))
+
+#t.addChannel("RadioCountToLedsC", sys.stdout)
+#t.addChannel("Boot", sys.stdout)
+#t.addChannel("DBG",sys.stdout)
+#t.addChannel("coverage",sys.stdout)
+t.addChannel("latency",sys.stdout)
+#t.addChannel("cost",sys.stdout)
+#t.addChannel("duplicates",sys.stdout)
+
+
+noise = open("meyer-short.txt", "r")
+for line in noise:
+  str1 = line.strip()
+  if str1:
+    val = int(str1)
+    for i in range(0, nofnodes):
+      t.getNode(i).addNoiseTraceReading(val)
+
+for i in range(0, nofnodes):
+  #print "Creating noise model for ",i;
+  t.getNode(i).createNoiseModel()
+
+for i in range(0, nofnodes):
+	t.getNode(i).bootAtTime(0)
+
+#t.getNode(0).bootAtTime(1);
+
+for i in range(1200000):
+  t.runNextEvent() 
