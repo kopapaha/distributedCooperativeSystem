@@ -1,4 +1,5 @@
-
+#include "TestSerial.h"
+#include "BlinkToRadio.h"
 
 configuration BlinkToRadioAppC
 {
@@ -11,6 +12,8 @@ implementation
   components new AMSenderC(AM_BLINKTORADIO);
   components new AMReceiverC(AM_BLINKTORADIO);
   components ActiveMessageC;
+  components new DemoSensorC() as lightSensor;
+  components SerialActiveMessageC as AM;
 
   BlinkToRadioC -> MainC.Boot;
 
@@ -21,9 +24,13 @@ implementation
   BlinkToRadioC.Packet -> AMSenderC;
   BlinkToRadioC.AMPacket -> AMSenderC;
   BlinkToRadioC.AMSend -> AMSenderC;
-
   BlinkToRadioC.AMControl -> ActiveMessageC;
   BlinkToRadioC.Receive -> AMReceiverC;
+  BlinkToRadioC.light-> lightSensor;
 
+  //Serial
+  BlinkToRadioC.serialControl -> AM;
+  BlinkToRadioC.serialAMSend -> AM.AMSend[AM_TEST_SERIAL_MSG];
+  BlinkToRadioC.serialPacket -> AM;
+  BlinkToRadioC.serialReceive -> AM.Receive[AM_TEST_SERIAL_MSG];
 }
-
