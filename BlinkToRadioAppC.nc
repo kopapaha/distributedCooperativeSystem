@@ -9,7 +9,9 @@ implementation
   components MainC, LedsC, BlinkToRadioC;
   components new TimerMilliC() as Timer0;
   components new TimerMilliC() as Timer1;
+#ifdef TEST_TIMER  
   components new TimerMilliC() as testTimer;
+#endif
   components new AMSenderC(AM_BLINKTORADIO);
   components new AMReceiverC(AM_BLINKTORADIO);
   components ActiveMessageC;
@@ -20,7 +22,9 @@ implementation
 
   BlinkToRadioC.Timer0 -> Timer0;
   BlinkToRadioC.Timer1 -> Timer1;
+#ifdef TEST_TIMER  
   BlinkToRadioC.testTimer -> testTimer;
+#endif  
   BlinkToRadioC.Leds -> LedsC;
 
   BlinkToRadioC.Packet -> AMSenderC;

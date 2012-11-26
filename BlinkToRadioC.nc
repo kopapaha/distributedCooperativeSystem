@@ -8,7 +8,9 @@ module BlinkToRadioC @safe()
 {
 	uses interface Timer<TMilli> as Timer0;
 	uses interface Timer<TMilli> as Timer1;
+#ifdef TEST_TIMER
 	uses interface Timer<TMilli> as testTimer;
+#endif	
 	uses interface Leds;
 	uses interface Boot;
 	uses interface Packet;
@@ -36,7 +38,7 @@ implementation {
 
 	struct queryBuffer qBuf[MAX_QUERIES];
 	
-	uint8_t ctrId = 0, randTime;
+	uint16_t ctrId = 0, randTime;
 	uint16_t sender = 0;
 	
 	bool sendQ = 0, busy = 0;
@@ -68,17 +70,20 @@ implementation {
 	
 	event void AMControl.startDone(error_t err) {
 		
-		srand (TOS_NODE_ID);
+		srand (TOS_NODE_ID +1);
 		if (err == SUCCESS){
 			init();
-			randTime = (uint8_t)rand()%80;
-			randTime += 50;
-			dbg("DBG", "randtime = %d.\n", randTime);
+
+			randTime = (uint16_t)rand() % MAXDELAY;
+
+			randTime += 10;
+			//dbg("DBG", "randtime = %d.\n", randTime);
 			call Timer0.startPeriodic(randTime);//Used to forward queries
 			
 			call Timer1.startPeriodic(BASIC_TIMER);
-			
-			call testTimer.startPeriodic(1000);
+#ifdef TEST_TIMER		
+			call testTimer.startPeriodic(TEST_TIMER_PERIOD_SIM);
+#endif
 		}
 		else {
 			call AMControl.start();
@@ -100,19 +105,20 @@ implementation {
 	event void AMControl.stopDone(error_t err) {}
 	
 
+#ifdef TEST_TIMER
 	event void testTimer.fired() {
 		
 		int i;
 		query_msg *m;
 		
 #ifndef SERIAL			
-			if(TOS_NODE_ID == sender%99 && (TOS_NODE_ID == 0 || TOS_NODE_ID == 1)) {
+			if(TOS_NODE_ID == sender%99 )  { //&& (TOS_NODE_ID == 0 || TOS_NODE_ID == 1)) {
 				m = (query_msg *) call Packet.getPayload(&q_pkt, sizeof(query_msg));
 				m->id =TOS_NODE_ID*IDBUF_SIZE + ctrId%IDBUF_SIZE;
 				m->group = 1;
 				m->from = TOS_NODE_ID;
-				m->period = 3000 + TOS_NODE_ID*1000;
-				m->lifetime = 12000;
+				m->period = PERIOD_SIM;
+				m->lifetime = LIFETIME_SIM;
 				m->hops = 0;
 				
 				for(i=0; i<MAX_QUERIES && qBuf[i].lifetimeCtr != 0; i++);
@@ -129,10 +135,10 @@ implementation {
 					call AMSend.send(AM_BROADCAST_ADDR, &q_pkt, sizeof(query_msg));
 				}
 				
-				dbg("DBG", "new query created. i= %d id: %d readCtr=%d @ %s\n", i, qBuf[i].q_id, qBuf[i].readCtr, sim_time_string());
+				dbg("DBG", "new query created. i= %d id: %d readCtr= %d @ %s\n", i, qBuf[i].q_id, qBuf[i].readCtr, sim_time_string());
 
 				//Calculate waitingTime
-				qBuf[i].waitingTime = (MAX_HOPS - 0)*(100+100);
+				qBuf[i].waitingTime = (MAX_HOPS - 0)*(2*MAXDELAY);
 
 				//Start measurement period
 				qBuf[i].lifetimeCtr = (uint16_t)( m->lifetime / BASIC_TIMER);
@@ -143,6 +149,8 @@ implementation {
 			sender++;
 #endif
 	}
+	
+#endif	
 
 	//Measurement's period
 	event void Timer1.fired() {
@@ -192,7 +200,7 @@ implementation {
 				
 						//for(i=0; i<HISTSIZE; i++)
 							//dataBuf[i] = 0;
-						dbg("DBG", "Source received result for query: %d! Value: %d %d %d @ %s\n",j, qBuf[j].data[0], qBuf[j].data[1], qBuf[j].data[2], sim_time_string());
+						dbg("DBG", "Source received result for query: %d ! period: %d Value: %d %d %d @ %s\n",j, qBuf[j].lifetimeCtr, qBuf[j].data[0], qBuf[j].data[1], qBuf[j].data[2], sim_time_string());
 #ifdef SERIAL
 						s = (test_serial_msg_t*)call Packet.getPayload(&serialp, sizeof(test_serial_msg_t));
 
@@ -253,7 +261,7 @@ implementation {
 	event void light.readDone(error_t result, uint16_t data) {
 		
 		uint8_t i;
-		dbg("DBG", "Read value: %d  @ %s\n", data, sim_time_string());
+		//dbg("DBG", "Read value: %d  @ %s\n", data, sim_time_string());
 		if (result == SUCCESS) {
 			
 			for(i=0; i<MAX_QUERIES; i++) {
@@ -307,7 +315,7 @@ implementation {
 			qBuf[i].readCtr = payl_q->period / BASIC_TIMER;
 			
 			//Calculate waiting timer
-			qBuf[i].waitingTime = (MAX_HOPS - 0)*(100+100);
+			qBuf[i].waitingTime = (MAX_HOPS - qBuf[i].hoplevel)*(2*MAXDELAY);
 			
 			//Start measurement period
 			qBuf[i].lifetimeCtr = (uint16_t)( payl_q->lifetime / BASIC_TIMER);
@@ -342,7 +350,7 @@ implementation {
 			//Green led toggles when a new result message arrives
 			//call Leds.led1Toggle();
 			
-			dbg("DBG", "Received result. Value: %d %d %d  @ %s\n", payl_r->data[0], payl_r->data[1], payl_r->data[2], sim_time_string());
+			//dbg("DBG", "Received result. Value: %d %d %d  @ %s\n", payl_r->data[0], payl_r->data[1], payl_r->data[2], sim_time_string());
 			
 			//Prosoxi an den yparxei to id mesa
 			for(i=0; i<MAX_QUERIES && qBuf[i].q_id != payl_r->id; i++);
@@ -394,7 +402,7 @@ implementation {
 
 			
 			//Calculate waiting timer
-			qBuf[i].waitingTime = (MAX_HOPS - 0)*(100+100);
+			qBuf[i].waitingTime = (MAX_HOPS - 0)*(2*MAXDELAY);
 			
 			//Red led toggles when a new query arrives
 			call Leds.led0Toggle();
