@@ -200,17 +200,20 @@ implementation {
 				
 						//for(i=0; i<HISTSIZE; i++)
 							//dataBuf[i] = 0;
-						dbg("DBG", "Source received result for query: %d ! period: %d Value: %d %d %d @ %s\n",j, qBuf[j].lifetimeCtr, qBuf[j].data[0], qBuf[j].data[1], qBuf[j].data[2], sim_time_string());
+						dbg("DBG", "Source received result for query %d id: %d ! period: %d Value: %d %d %d @ %s\n", j, qBuf[j].q_id, qBuf[j].lifetimeCtr, qBuf[j].data[0], qBuf[j].data[1], qBuf[j].data[2], sim_time_string());
 #ifdef SERIAL
 						s = (test_serial_msg_t*)call Packet.getPayload(&serialp, sizeof(test_serial_msg_t));
 
 						s->data[0] = qBuf[j].data[0];
 						s->data[1] = qBuf[j].data[1];
 						s->data[2] = qBuf[j].data[2];
-						
+
+						s->lifetime = j; //symvash epistrofhs sto lifetime to id tou query
+						s->period = qBuf[j].q_id; //symvash epistrofhs sto period to id tou paketou
+
 						call serialAMSend.send(AM_BROADCAST_ADDR, &serialp, sizeof(test_serial_msg_t));
 #endif
-						for(i=1; i<HISTSIZE; i++)	//Reset buffer after send to serial
+						for(i=0; i<HISTSIZE; i++)	//Reset buffer after send to serial
 							qBuf[j].data[i] = 0;
 				
 						qBuf[j].sendR = 0;
@@ -231,7 +234,7 @@ implementation {
 					
 					dbg("DBG", "Aggregated packet send. Query: %d Value: %d %d %d  @ %s\n",j, qBuf[j].data[0], qBuf[j].data[1], qBuf[j].data[2], sim_time_string());
 					
-					for(i=1; i<HISTSIZE; i++)	//Reset buffer after send to serial
+					for(i=0; i<HISTSIZE; i++)	//Reset buffer after send to serial
 							qBuf[j].data[i] = 0;
 					
 					busy = 1;
@@ -421,4 +424,3 @@ implementation {
 
 
 }
-			//Reset vounter for waiting time, molis diavasei ti diki tou timi.
