@@ -1,5 +1,12 @@
 wireless sensor networks
 
+distributed cooperative system:
+1.sending query from host(PC)/source to all nodes/workers
+2.workers do their job and submit result to neighbourhood workers
+3.each worker aggregate results (waits for the rest path) and disseminate back
+avoiding collisions via pseudorandom backoff interval
+
+
 programming language: nesC
 operating system: tinyOS
 simulation: TOSSIM
